@@ -1,0 +1,29 @@
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans',
+    'Droid Sans', 'Helvetica Neue', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+#root {
+  width: 100%;
+  height: 100vh;
+}
+
+/* 进项发票表格：去除斑马纹，表头加底色，标题不换行 */
+.hi-v5-table-header-cell {
+  background-color: #f0f5ff !important;
+  white-space: nowrap !important;
+}
+
+/* 去掉表格最外层左右边框 */
+.hi-v5-table--bordered > .hi-v5-table__wrapper {
+  border-inline-start: none !important;
+  border-inline-end: none !important;
+}
+/* 同步去掉第一列表头左边框 */
+.hi-v5-table--bordered > .hi-v5-table__wrapper .hi-v5-table-header-cell:first-child,
+.hi-v5-table--bordered > .hi-v5-table__wrapper .hi-v5-table-cell:first-child {
+  border-inline-start: none !important;
+}

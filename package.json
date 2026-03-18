@@ -1,0 +1,48 @@
+{
+  "name": "workspace-scaffold",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "A basic Vite + React + TypeScript project scaffold",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@hi-ui/avatar": "canary",
+    "@hi-ui/button": "canary",
+    "@hi-ui/descriptions": "5.0.0-canary.9",
+    "@hi-ui/drawer": "5.0.0-canary.10",
+    "@hi-ui/dropdown": "canary",
+    "@hi-ui/ellipsis-tooltip": "canary",
+    "@hi-ui/hiui": "canary",
+    "@hi-ui/icon-button": "canary",
+    "@hi-ui/icons": "canary",
+    "@hi-ui/layout": "canary",
+    "@hi-ui/menu": "canary",
+    "@hi-ui/modal": "5.0.0-canary.13",
+    "@hi-ui/page-header": "canary",
+    "@hi-ui/search": "canary",
+    "@hi-ui/space": "canary",
+    "@hi-ui/table": "5.0.0-canary.31",
+    "@hi-ui/tabs": "5.0.0-canary.15",
+    "@hi-ui/upload": "5.0.0-canary.16",
+    "dayjs": "^1.11.19",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-router-dom": "^6.28.0",
+    "tslib": "^2.8.1"
+  },
+  "devDependencies": {
+    "@types/react": "^18.3.12",
+    "@types/react-dom": "^18.3.1",
+    "@vitejs/plugin-react": "^5.1.2",
+    "typescript": "^5.9.3",
+    "vite": "^7.3.0",
+    "xlsx": "^0.18.5"
+  },
+  "packageManager": "pnpm@10.27.0",
+  "engines": {
+    "node": ">=24.10.4"
+  }
+}
