@@ -2,9 +2,12 @@ import React from 'react'
 import Table from '@hi-ui/table'
 import InvoiceDetailDrawer from './InvoiceDetailDrawer'
 import { makeFilterColumn, useColumnFilters } from './ColumnFilter'
-import { AddRowButton, createEmptyRow, EditableCell } from './EditableRow'
+import { EditableCell, createEmptyRow } from './EditableRow'
+import { DeleteOutlined } from '@hi-ui/icons'
+import { exportToCSV } from './ExportUtils'
 
 const columnDefs = [
+  { dataKey: '_delete',           title: '',                               width: 40  },
   { dataKey: 'fileType',          title: 'File Type',                    width: 90  },
   { dataKey: 'paymentNo',         title: 'Payment No.',                  width: 150 },
   { dataKey: 'wdNo',              title: 'WD No.',                       width: 100 },
@@ -108,19 +111,46 @@ function toFields(row: (typeof data)[0]) {
   ]
 }
 
-export default function NetherlandsTable() {
+export default function NetherlandsTable({ onAddRowHandlerReady }: { onAddRowHandlerReady?: (handler: () => void) => void }) {
   const [drawerVisible, setDrawerVisible] = React.useState(false)
   const [activeRow, setActiveRow] = React.useState<(typeof data)[0] | null>(null)
   const [editingData, setEditingData] = React.useState([...data])
+  const [newRowIds, setNewRowIds] = React.useState<Set<number>>(new Set())
 
   const { filters, setFilter, filteredData } = useColumnFilters(editingData as Record<string, unknown>[], filterableKeys)
 
   const handleAddRow = () => {
+    const maxId = Math.max(...editingData.map((r) => r.id), 0)
+    const newId = maxId + 1
     const newRow = createEmptyRow<(typeof data)[0]>(
-      columnDefs.map((c) => c.dataKey).filter((k) => k !== '_action') as (keyof (typeof data)[0])[],
-      Math.max(...editingData.map((r) => r.id), 0),
+      columnDefs.map((c) => c.dataKey).filter((k) => k !== '_action' && k !== '_delete') as (keyof (typeof data)[0])[],
+      maxId,
     )
     setEditingData([...editingData, newRow])
+    setNewRowIds(new Set([...newRowIds, newId]))
+  }
+
+  React.useEffect(() => {
+    onAddRowHandlerReady?.(handleAddRow)
+  }, [onAddRowHandlerReady, editingData, newRowIds])
+
+  // 注册导出函数到全局 window 对象
+  React.useEffect(() => {
+    (window as any).__invoiceExportData = () => {
+      exportToCSV('荷兰发票', filteredData as typeof data, columnDefs)
+    }
+    return () => {
+      delete (window as any).__invoiceExportData
+    }
+  }, [filteredData])
+
+  const handleDeleteRow = (rowId: number) => {
+    setEditingData((prev) => prev.filter((row) => row.id !== rowId))
+    setNewRowIds((prev) => {
+      const updated = new Set(prev)
+      updated.delete(rowId)
+      return updated
+    })
   }
 
   const handleCellChange = (rowId: number, key: string, value: unknown) => {
@@ -129,51 +159,100 @@ export default function NetherlandsTable() {
     )
   }
 
+  const handleConfirmEdit = (rowId: number) => {
+    // 编辑完成后，该行变成只读
+    setNewRowIds((prev) => {
+      const updated = new Set(prev)
+      updated.delete(rowId)
+      return updated
+    })
+  }
+
   const tableColumns = columnDefs.map((col) => {
-    if (col.dataKey === '_action') {
+    // 删除列
+    if (col.dataKey === '_delete') {
       return {
         ...col,
         render: (_: unknown, row: (typeof data)[0]) => (
-          <span
-            style={{ color: '#2660ff', cursor: 'pointer' }}
-            onClick={() => { setActiveRow(row); setDrawerVisible(true) }}
-          >
-            详情
-          </span>
-        ),
-      }
-    }
-    // 只给 filterableKeys 里的列加筛选
-    if (!filterableKeys.includes(col.dataKey)) {
-      // 非筛选列的可编辑单元格
-      return {
-        ...col,
-        render: (value: unknown, row: (typeof data)[0]) => (
-          <EditableCell
-            value={value}
-            onChange={(v) => handleCellChange(row.id, col.dataKey, v)}
+          <DeleteOutlined
+            style={{ color: '#ff4d4f', cursor: 'pointer', fontSize: 14 }}
+            onClick={() => handleDeleteRow(row.id)}
           />
         ),
       }
     }
+    // 操作列
+    if (col.dataKey === '_action') {
+      return {
+        ...col,
+        render: (_: unknown, row: (typeof data)[0]) => {
+          const isEditing = newRowIds.has(row.id)
+          return isEditing ? (
+            <button
+              onClick={() => handleConfirmEdit(row.id)}
+              style={{
+                padding: '2px 8px',
+                fontSize: 13,
+                border: 'none',
+                borderRadius: 4,
+                background: '#2660ff',
+                color: '#fff',
+                cursor: 'pointer',
+              }}
+            >
+              保存
+            </button>
+          ) : (
+            <span
+              style={{ color: '#2660ff', cursor: 'pointer' }}
+              onClick={() => { setActiveRow(row); setDrawerVisible(true) }}
+            >
+              详情
+            </span>
+          )
+        },
+      }
+    }
+    // 只给 filterableKeys 里的列加筛选
+    if (!filterableKeys.includes(col.dataKey)) {
+      return {
+        ...col,
+        render: (value: unknown, row: (typeof data)[0]) => {
+          const isEditing = newRowIds.has(row.id)
+          return isEditing ? (
+            <EditableCell
+              value={value}
+              onChange={(v) => handleCellChange(row.id, col.dataKey, v)}
+            />
+          ) : (
+            String(value ?? '')
+          )
+        },
+      }
+    }
+    // 筛选列
     return {
       ...col,
       ...makeFilterColumn(
         filters[col.dataKey],
         (v) => setFilter(col.dataKey, v),
       ),
-      render: (value: unknown, row: (typeof data)[0]) => (
-        <EditableCell
-          value={value}
-          onChange={(v) => handleCellChange(row.id, col.dataKey, v)}
-        />
-      ),
+      render: (value: unknown, row: (typeof data)[0]) => {
+        const isEditing = newRowIds.has(row.id)
+        return isEditing ? (
+          <EditableCell
+            value={value}
+            onChange={(v) => handleCellChange(row.id, col.dataKey, v)}
+          />
+        ) : (
+          String(value ?? '')
+        )
+      },
     }
   })
 
   return (
     <>
-      <AddRowButton onClick={handleAddRow} />
       <Table
         bordered
         columns={tableColumns}

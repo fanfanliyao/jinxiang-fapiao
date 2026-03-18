@@ -347,8 +347,19 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ routes, children }) => {
               >
                 <Button appearance='line' icon={<EllipsisOutlined />} />
               </Dropdown>
-              <Button type='primary' appearance='line'>
-                次要操作
+              <Button 
+                type='primary' 
+                appearance='line'
+                onClick={() => {
+                  const exportData = (window as any).__invoiceExportData
+                  if (exportData) {
+                    exportData()
+                  } else {
+                    alert('当前页面不支持批量导出')
+                  }
+                }}
+              >
+                批量导出
               </Button>
               {pageExtra ?? (
                 <Button type='primary' icon={<PlusOutlined />}>

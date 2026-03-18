@@ -2,8 +2,12 @@ import React from 'react'
 import Table from '@hi-ui/table'
 import InvoiceDetailDrawer from './InvoiceDetailDrawer'
 import { makeFilterColumn, useColumnFilters } from './ColumnFilter'
+import { EditableCell, createEmptyRow } from './EditableRow'
+import { DeleteOutlined } from '@hi-ui/icons'
+import { exportToCSV } from './ExportUtils'
 
 const columnDefs = [
+  { dataKey: '_delete',       title: '',                               width: 40  },
   { dataKey: 'year',          title: 'Year',                         width: 80  },
   { dataKey: 'period',        title: 'Period',                       width: 80  },
   { dataKey: 'type',          title: 'Type (Invoice or Credit note)', width: 260 },
@@ -79,29 +83,118 @@ function toFields(row: (typeof data)[0]) {
   ]
 }
 
-export default function SpainTable() {
+export default function SpainTable({ onAddRowHandlerReady }: { onAddRowHandlerReady?: (handler: () => void) => void }) {
   const [drawerVisible, setDrawerVisible] = React.useState(false)
   const [activeRow, setActiveRow] = React.useState<(typeof data)[0] | null>(null)
+  const [editingData, setEditingData] = React.useState([...data])
+  const [newRowIds, setNewRowIds] = React.useState<Set<number>>(new Set())
 
-  const { filters, setFilter, filteredData } = useColumnFilters(data as Record<string, unknown>[], filterableKeys)
+  const { filters, setFilter, filteredData } = useColumnFilters(editingData as Record<string, unknown>[], filterableKeys)
+
+  const handleAddRow = () => {
+    const maxId = Math.max(...editingData.map((r) => r.id), 0)
+    const newRow = createEmptyRow<(typeof data)[0]>(
+      columnDefs.map((c) => c.dataKey).filter((k) => k !== '_action' && k !== '_delete') as (keyof (typeof data)[0])[],
+      maxId,
+    )
+    setEditingData([...editingData, newRow])
+    setNewRowIds(new Set([...newRowIds, maxId + 1]))
+  }
+
+  const handleDeleteRow = (rowId: number) => {
+    setEditingData((prev) => prev.filter((row) => row.id !== rowId))
+    setNewRowIds((prev) => {
+      const updated = new Set(prev)
+      updated.delete(rowId)
+      return updated
+    })
+  }
+
+  const handleCellChange = (rowId: number, key: string, value: unknown) => {
+    setEditingData((prev) =>
+      prev.map((row) => (row.id === rowId ? { ...row, [key]: value } : row)),
+    )
+  }
+
+  const handleConfirmEdit = (rowId: number) => {
+    setNewRowIds((prev) => {
+      const updated = new Set(prev)
+      updated.delete(rowId)
+      return updated
+    })
+  }
+
+  React.useEffect(() => {
+    onAddRowHandlerReady?.(handleAddRow)
+  }, [onAddRowHandlerReady, editingData, newRowIds])
+
+  React.useEffect(() => {
+    (window as any).__invoiceExportData = () => {
+      exportToCSV('西班牙发票', filteredData as typeof data, columnDefs)
+    }
+    return () => {
+      delete (window as any).__invoiceExportData
+    }
+  }, [filteredData])
 
   const tableColumns = columnDefs.map((col) => {
-    if (col.dataKey === '_action') {
+    if (col.dataKey === '_delete') {
       return {
         ...col,
         render: (_: unknown, row: (typeof data)[0]) => (
-          <span
-            style={{ color: '#2660ff', cursor: 'pointer' }}
-            onClick={() => { setActiveRow(row); setDrawerVisible(true) }}
-          >
-            详情
-          </span>
+          <DeleteOutlined
+            style={{ color: '#ff4d4f', cursor: 'pointer', fontSize: 14 }}
+            onClick={() => handleDeleteRow(row.id)}
+          />
         ),
       }
     }
-    // 只给 filterableKeys 里的列加筛选
+    if (col.dataKey === '_action') {
+      return {
+        ...col,
+        render: (_: unknown, row: (typeof data)[0]) => {
+          const isEditing = newRowIds.has(row.id)
+          return isEditing ? (
+            <button
+              onClick={() => handleConfirmEdit(row.id)}
+              style={{
+                padding: '2px 8px',
+                fontSize: 13,
+                border: 'none',
+                borderRadius: 4,
+                background: '#2660ff',
+                color: '#fff',
+                cursor: 'pointer',
+              }}
+            >
+              保存
+            </button>
+          ) : (
+            <span
+              style={{ color: '#2660ff', cursor: 'pointer' }}
+              onClick={() => { setActiveRow(row); setDrawerVisible(true) }}
+            >
+              详情
+            </span>
+          )
+        },
+      }
+    }
     if (!filterableKeys.includes(col.dataKey)) {
-      return col
+      return {
+        ...col,
+        render: (value: unknown, row: (typeof data)[0]) => {
+          const isEditing = newRowIds.has(row.id)
+          return isEditing ? (
+            <EditableCell
+              value={value}
+              onChange={(v) => handleCellChange(row.id, col.dataKey, v)}
+            />
+          ) : (
+            String(value ?? '')
+          )
+        },
+      }
     }
     return {
       ...col,
@@ -109,6 +202,17 @@ export default function SpainTable() {
         filters[col.dataKey],
         (v) => setFilter(col.dataKey, v),
       ),
+      render: (value: unknown, row: (typeof data)[0]) => {
+        const isEditing = newRowIds.has(row.id)
+        return isEditing ? (
+          <EditableCell
+            value={value}
+            onChange={(v) => handleCellChange(row.id, col.dataKey, v)}
+          />
+        ) : (
+          String(value ?? '')
+        )
+      },
     }
   })
 

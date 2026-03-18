@@ -1,17 +1,21 @@
-import Button from '@hi-ui/button'
-import { PlusOutlined } from '@hi-ui/icons'
-
 /** 新增行按钮 */
 export function AddRowButton({ onClick }: { onClick: () => void }) {
   return (
-    <Button
-      type="primary"
-      icon={<PlusOutlined />}
+    <button
       onClick={onClick}
-      style={{ marginBottom: 12 }}
+      style={{
+        padding: '4px 12px',
+        fontSize: 12,
+        border: '1px solid #2660ff',
+        borderRadius: 4,
+        background: '#fff',
+        color: '#2660ff',
+        cursor: 'pointer',
+        fontWeight: 500,
+      }}
     >
-      新增
-    </Button>
+      + 新增
+    </button>
   )
 }
 
