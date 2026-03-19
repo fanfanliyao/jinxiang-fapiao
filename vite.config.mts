@@ -28,7 +28,7 @@ const featuresEnv = features.length > 0 ? features.join(',') : undefined
 
 // https://vite.dev/config/
 export default defineConfig({
-  base: '/invoice-app/',
+  base: '/',
   plugins: [react()],
   server: {
     port: 5174,
